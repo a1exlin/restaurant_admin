@@ -9,8 +9,12 @@ A mobile and web schedule builder for restaurant managers to create and edit sta
 - **Shift editing**: Tap any cell to enter shift times (e.g. `5-11`, `11-5`, `11-11`, `RO` for requested off)
 - **Shift suffixes**: Add section codes like `5-11P`, `11-5F` for floor sections
 - **Headcount**: Each role has a footer row showing morning–night headcount (e.g. `3-4` = 3 morning, 4 night)
+- **Multi-week storage**: Each week saves separately—navigate to any week and edit
+- **Copy to next week**: Duplicate the current schedule to the following week
 - **Week navigation**: Previous/Next week and "Today" jump
-- **Persistence**: Data saved to localStorage automatically
+- **Print / Save PDF**: Print or save schedule as PDF with clean grid lines
+- **Sample schedule**: Load sample data (Server + Bar staff for March 16–22)
+- **Persistence**: Data saved to localStorage (web) or AsyncStorage (mobile)
 
 ## Run
 

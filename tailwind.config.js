@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        print: { raw: 'print' },
+      },
       fontFamily: {
         sans: ['DM Sans', 'system-ui', 'sans-serif'],
       },

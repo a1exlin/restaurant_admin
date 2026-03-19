@@ -4,18 +4,29 @@ React Native (Expo) version of the schedule builder. Build for iOS and distribut
 
 ## Prerequisites
 
-- **Node.js 20.19+** (required for Expo SDK 55; install from [nodejs.org](https://nodejs.org))
+- **Node.js 20+** (required for Expo SDK 54; install from [nodejs.org](https://nodejs.org))
 - **Apple Developer account** ($99/year) for TestFlight
 - **Expo account** (free at [expo.dev](https://expo.dev))
 
-## Run locally
+## Run locally (CLI – no Expo Go)
 
+**iOS Simulator** (requires Xcode):
 ```bash
 cd mobile
-npm start
+npm run ios
 ```
 
-Then scan the QR code with Expo Go on your phone, or press `i` for iOS simulator.
+**Android Emulator**:
+```bash
+cd mobile
+npm run android
+```
+
+**Expo Go** (optional):
+```bash
+npm start
+```
+Then scan the QR code with Expo Go, or press `i` for simulator.
 
 ## Build for TestFlight
 

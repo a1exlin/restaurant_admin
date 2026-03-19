@@ -18,9 +18,13 @@ export interface RoleWithStaff {
   staff: StaffMember[];
 }
 
-export interface ScheduleState {
-  weekStart: string;
-  roles: RoleWithStaff[];
+export interface WeekSchedule {
   shifts: Record<string, Record<DayOfWeek, Shift | null>>;
   headcounts: Record<RoleId, Record<DayOfWeek, { morning: number; night: number }>>;
+}
+
+export interface ScheduleState {
+  currentWeekStart: string;
+  roles: RoleWithStaff[];
+  weekSchedules: Record<string, WeekSchedule>;
 }

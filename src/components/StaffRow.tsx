@@ -57,7 +57,7 @@ export function StaffRow({
           <button
             type="button"
             onClick={onDelete}
-            className="p-1.5 rounded hover:bg-red-100 text-schedule-textMuted hover:text-red-600 transition-colors"
+            className="no-print p-1.5 rounded hover:bg-red-100 text-schedule-textMuted hover:text-red-600 transition-colors"
             title="Delete"
             aria-label="Delete"
           >
