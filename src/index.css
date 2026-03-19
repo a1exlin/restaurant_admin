@@ -19,3 +19,101 @@ body {
     min-height: 44px;
   }
 }
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ensure schedule content fills the page */
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Compact layout - reduce margins and padding */
+  .schedule-container {
+    margin: 0 !important;
+    padding: 0.25in !important;
+    max-width: none !important;
+  }
+
+  section {
+    margin-bottom: 12pt !important;
+  }
+
+  /* Keep tables readable - force borders and backgrounds */
+  table {
+    break-inside: avoid;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  /* Remove shadows and rounded corners for cleaner print */
+  .rounded-xl,
+  .rounded-lg {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* Ensure overflow doesn't clip borders when printing */
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  /* Ensure text is black for print */
+  .text-schedule-text,
+  .text-schedule-textMuted,
+  .text-schedule-headcount,
+  .text-schedule-accent {
+    color: #1a1a1a !important;
+  }
+
+  .text-schedule-accent {
+    font-weight: 700;
+  }
+
+  /* Header row - light gray background for clarity */
+  thead tr,
+  tfoot tr {
+    background: #e8e8e8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Borders for all cells - full grid on every side including Name column */
+  td, th {
+    border-top: 1px solid #333 !important;
+    border-right: 1px solid #333 !important;
+    border-bottom: 1px solid #333 !important;
+    border-left: 1px solid #333 !important;
+    padding: 0.15em 0.35em !important;
+    font-size: 10pt !important;
+  }
+
+  /* Compact row height - remove min-height from buttons/cells */
+  tbody tr td,
+  tbody tr td button,
+  tfoot tr td,
+  tfoot tr td button {
+    min-height: 0 !important;
+    line-height: 1.2 !important;
+    padding: 0.15em 0.35em !important;
+  }
+
+  /* Role section headers - compact */
+  section h2 {
+    font-size: 11pt !important;
+    margin-bottom: 4pt !important;
+  }
+}

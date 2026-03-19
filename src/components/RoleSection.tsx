@@ -35,13 +35,13 @@ export function RoleSection({
   const days = weekDates.map((w) => w.day);
 
   return (
-    <section className="mb-8">
-      <div className="flex items-center justify-between mb-2">
+    <section className="mb-8 print:mb-4">
+      <div className="flex items-center justify-between mb-2 print:mb-1">
         <h2 className="text-lg font-bold text-schedule-accent uppercase tracking-wider">{label}</h2>
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-schedule-accent hover:bg-schedule-accentHover text-white font-medium text-sm transition-colors shadow-sm"
+          className="no-print flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-schedule-accent hover:bg-schedule-accentHover text-white font-medium text-sm transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

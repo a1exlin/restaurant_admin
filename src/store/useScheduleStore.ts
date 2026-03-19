@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import type { RoleId, DayOfWeek, Shift, ScheduleState, RoleWithStaff } from '../types';
+import type { RoleId, DayOfWeek, Shift, ScheduleState, RoleWithStaff, WeekSchedule } from '../types';
 import { getStartOfWeek } from '../utils/dateUtils';
+import { SEED_SCHEDULE } from '../data/seedSchedule';
 
 const ROLES: { id: RoleId; label: string }[] = [
   { id: 'server', label: 'SERVER' },
@@ -13,26 +14,32 @@ const DAYS: DayOfWeek[] = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 const STORAGE_KEY = 'restaurant-schedule';
 
+function migrateLegacyState(parsed: Record<string, unknown>): ScheduleState {
+  const weekStart = (parsed.weekStart as string) || getStartOfWeek(new Date()).toISOString().split('T')[0];
+  return {
+    currentWeekStart: weekStart,
+    roles: (parsed.roles as RoleWithStaff[]) ?? ROLES.map((r) => ({ ...r, staff: [] })),
+    weekSchedules: {
+      [weekStart]: {
+        shifts: (parsed.shifts as Record<string, Record<DayOfWeek, Shift | null>>) ?? {},
+        headcounts: (parsed.headcounts as WeekSchedule['headcounts']) ?? {},
+      },
+    },
+  };
+}
+
 function loadInitialState(): ScheduleState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return {
-        weekStart: parsed.weekStart || new Date().toISOString().split('T')[0],
-        roles: parsed.roles ?? ROLES.map((r: { id: RoleId; label: string }) => ({ ...r, staff: [] })),
-        shifts: parsed.shifts ?? {},
-        headcounts: parsed.headcounts ?? {},
-      };
+      if (parsed.weekSchedules) {
+        return parsed as ScheduleState;
+      }
+      return migrateLegacyState(parsed);
     }
   } catch (_) {}
-  const weekStart = getStartOfWeek(new Date());
-  return {
-    weekStart: weekStart.toISOString().split('T')[0],
-    roles: ROLES.map((r) => ({ ...r, staff: [] })),
-    shifts: {} as Record<string, Record<DayOfWeek, Shift | null>>,
-    headcounts: {} as Record<RoleId, Record<DayOfWeek, { morning: number; night: number }>>,
-  };
+  return SEED_SCHEDULE;
 }
 
 function getDefaultHeadcount(roleId: RoleId, day: DayOfWeek): { morning: number; night: number } {
@@ -42,6 +49,12 @@ function getDefaultHeadcount(roleId: RoleId, day: DayOfWeek): { morning: number;
   if (roleId === 'host') return isWeekend ? { morning: 2, night: 3 } : { morning: 2, night: 2 };
   if (roleId === 'busser') return isWeekend ? { morning: 2, night: 3 } : { morning: 1, night: 2 };
   return { morning: 1, night: 1 };
+}
+
+function getOrCreateWeekSchedule(state: ScheduleState, weekKey: string): WeekSchedule {
+  const existing = state.weekSchedules[weekKey];
+  if (existing) return existing;
+  return { shifts: {}, headcounts: {} } as WeekSchedule;
 }
 
 function persistToStorage(state: ScheduleState): void {
@@ -91,7 +104,7 @@ export function useScheduleStore() {
         ...prev,
         roles: prev.roles.map((r: RoleWithStaff) =>
           r.id === roleId
-            ? { ...r, staff: r.staff.map((s: { id: string; name: string }) => (s.id === staffId ? { ...s, name: name.trim() || s.name } : s)) }
+            ? { ...r, staff: r.staff.map((s) => (s.id === staffId ? { ...s, name: name.trim() || s.name } : s)) }
             : r
         ),
       }));
@@ -102,14 +115,19 @@ export function useScheduleStore() {
   const deleteStaff = useCallback(
     (roleId: RoleId, staffId: string) => {
       updateState((prev) => {
-        const newShifts = { ...prev.shifts };
+        const weekKey = prev.currentWeekStart;
+        const week = getOrCreateWeekSchedule(prev, weekKey);
+        const newShifts = { ...week.shifts };
         delete newShifts[`${roleId}_${staffId}`];
         return {
           ...prev,
-          roles: prev.roles.map((r: RoleWithStaff) =>
-            r.id === roleId ? { ...r, staff: r.staff.filter((s: { id: string }) => s.id !== staffId) } : r
+          roles: prev.roles.map((r) =>
+            r.id === roleId ? { ...r, staff: r.staff.filter((s) => s.id !== staffId) } : r
           ),
-          shifts: newShifts,
+          weekSchedules: {
+            ...prev.weekSchedules,
+            [weekKey]: { ...week, shifts: newShifts },
+          },
         };
       });
     },
@@ -119,11 +137,19 @@ export function useScheduleStore() {
   const setShift = useCallback(
     (roleId: RoleId, staffId: string, day: DayOfWeek, shift: Shift | null) => {
       updateState((prev) => {
+        const weekKey = prev.currentWeekStart;
+        const week = getOrCreateWeekSchedule(prev, weekKey);
         const key = `${roleId}_${staffId}`;
-        const dayShifts = { ...(prev.shifts[key] ?? {}), [day]: shift };
+        const dayShifts = { ...(week.shifts[key] ?? {}), [day]: shift };
         return {
           ...prev,
-          shifts: { ...prev.shifts, [key]: dayShifts },
+          weekSchedules: {
+            ...prev.weekSchedules,
+            [weekKey]: {
+              ...week,
+              shifts: { ...week.shifts, [key]: dayShifts },
+            },
+          },
         };
       });
     },
@@ -132,44 +158,82 @@ export function useScheduleStore() {
 
   const setHeadcount = useCallback(
     (roleId: RoleId, day: DayOfWeek, morning: number, night: number) => {
-      updateState((prev) => ({
-        ...prev,
-        headcounts: {
-          ...prev.headcounts,
-          [roleId]: {
-            ...(prev.headcounts[roleId] ?? {}),
-            [day]: { morning, night },
+      updateState((prev) => {
+        const weekKey = prev.currentWeekStart;
+        const week = getOrCreateWeekSchedule(prev, weekKey);
+        return {
+          ...prev,
+          weekSchedules: {
+            ...prev.weekSchedules,
+            [weekKey]: {
+              ...week,
+              headcounts: {
+                ...week.headcounts,
+                [roleId]: {
+                  ...(week.headcounts[roleId] ?? {}),
+                  [day]: { morning, night },
+                },
+              },
+            },
           },
-        },
-      }));
+        };
+      });
     },
     [updateState]
   );
 
   const setWeekStart = useCallback(
     (date: Date) => {
-      const weekStart = getStartOfWeek(date).toISOString().split('T')[0];
-      updateState((prev) => ({ ...prev, weekStart }));
+      const weekKey = getStartOfWeek(date).toISOString().split('T')[0];
+      updateState((prev) => ({ ...prev, currentWeekStart: weekKey }));
     },
     [updateState]
   );
 
   const getShift = useCallback(
     (roleId: RoleId, staffId: string, day: DayOfWeek): Shift | null => {
+      const week = state.weekSchedules[state.currentWeekStart];
+      if (!week) return null;
       const key = `${roleId}_${staffId}`;
-      return state.shifts[key]?.[day] ?? null;
+      return week.shifts[key]?.[day] ?? null;
     },
-    [state.shifts]
+    [state.weekSchedules, state.currentWeekStart]
   );
 
   const getHeadcount = useCallback(
     (roleId: RoleId, day: DayOfWeek): { morning: number; night: number } => {
-      return (
-        state.headcounts[roleId]?.[day] ?? getDefaultHeadcount(roleId, day)
-      );
+      const week = state.weekSchedules[state.currentWeekStart];
+      if (!week?.headcounts[roleId]?.[day]) return getDefaultHeadcount(roleId, day);
+      return week.headcounts[roleId][day];
     },
-    [state.headcounts]
+    [state.weekSchedules, state.currentWeekStart]
   );
+
+  const copyWeekToNext = useCallback(() => {
+    updateState((prev) => {
+      const current = prev.currentWeekStart;
+      const currentDate = new Date(current + 'T12:00:00');
+      const nextDate = new Date(currentDate);
+      nextDate.setDate(nextDate.getDate() + 7);
+      const nextKey = getStartOfWeek(nextDate).toISOString().split('T')[0];
+      const week = getOrCreateWeekSchedule(prev, current);
+      return {
+        ...prev,
+        weekSchedules: {
+          ...prev.weekSchedules,
+          [nextKey]: {
+            shifts: JSON.parse(JSON.stringify(week.shifts)),
+            headcounts: JSON.parse(JSON.stringify(week.headcounts)),
+          },
+        },
+        currentWeekStart: nextKey,
+      };
+    });
+  }, [updateState]);
+
+  const loadSampleSchedule = useCallback(() => {
+    updateState(() => SEED_SCHEDULE);
+  }, [updateState]);
 
   return {
     state,
@@ -181,6 +245,8 @@ export function useScheduleStore() {
     setWeekStart,
     getShift,
     getHeadcount,
+    copyWeekToNext,
+    loadSampleSchedule,
     days: DAYS,
   };
 }

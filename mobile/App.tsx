@@ -8,6 +8,8 @@ import {
   TextInput,
   Modal,
   Pressable,
+  Image,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -32,7 +34,10 @@ function WeekNav({ weekStart, onWeekChange }: { weekStart: string; onWeekChange:
 
   return (
     <View style={styles.weekNav}>
-      <Text style={styles.title}>Schedule</Text>
+      <View style={styles.headerRow}>
+        <Image source={require('./assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+        <Text style={styles.title}>Schedule</Text>
+      </View>
       <View style={styles.weekNavRow}>
         <TouchableOpacity style={styles.navBtn} onPress={() => go(-1)}>
           <Text style={styles.navBtnText}>‹</Text>
@@ -120,6 +125,7 @@ function RoleSection({
   const [editingCell, setEditingCell] = useState<{ staffId: string; day: import('./src/types').DayOfWeek } | null>(null);
   const [editingHeadcount, setEditingHeadcount] = useState<import('./src/types').DayOfWeek | null>(null);
   const [editInput, setEditInput] = useState('');
+  const [editHeadcountInput, setEditHeadcountInput] = useState('');
   const [editName, setEditName] = useState<{ id: string; name: string } | null>(null);
 
   return (
@@ -226,7 +232,7 @@ function RoleSection({
             <View style={[styles.cell, styles.nameCell, styles.headcountLabel]}>
               <Text style={styles.headcountLabelText}>AM–PM</Text>
             </View>
-            {weekDates.map(({ day }) => {
+              {weekDates.map(({ day }) => {
               const hc = getHeadcount(role.id, day);
               const isEditing = editingHeadcount === day;
 
@@ -236,11 +242,11 @@ function RoleSection({
                     <View style={styles.hcEditRow}>
                       <TextInput
                         style={styles.hcInput}
-                        value={editInput}
-                        onChangeText={setEditInput}
+                        value={editHeadcountInput}
+                        onChangeText={setEditHeadcountInput}
                         keyboardType="number-pad"
                         onBlur={() => {
-                          const [m, n] = editInput.split('-').map((x) => Math.max(0, parseInt(x, 10) || 0));
+                          const [m, n] = editHeadcountInput.split('-').map((x) => Math.max(0, parseInt(x, 10) || 0));
                           setHeadcount(role.id, day, m, n);
                           setEditingHeadcount(null);
                         }}
@@ -251,7 +257,7 @@ function RoleSection({
                     <TouchableOpacity
                       style={styles.headcountCell}
                       onPress={() => {
-                        setEditInput(`${hc.morning}-${hc.night}`);
+                        setEditHeadcountInput(`${hc.morning}-${hc.night}`);
                         setEditingHeadcount(day);
                       }}
                     >
@@ -297,9 +303,11 @@ export default function App() {
     setWeekStart,
     getShift,
     getHeadcount,
+    copyWeekToNext,
+    loadSampleSchedule,
   } = useScheduleStore();
 
-  const weekStart = new Date(state.weekStart + 'T12:00:00');
+  const weekStart = new Date(state.currentWeekStart + 'T12:00:00');
   const weekDates = getWeekDates(weekStart);
 
   if (!isHydrated) {
@@ -307,7 +315,7 @@ export default function App() {
       <SafeAreaProvider>
         <View style={[styles.container, styles.centered]}>
           <Text style={styles.loadingText}>Loading...</Text>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
         </View>
       </SafeAreaProvider>
     );
@@ -316,13 +324,22 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          <WeekNav weekStart={state.weekStart} onWeekChange={setWeekStart} />
+          <WeekNav weekStart={state.currentWeekStart} onWeekChange={setWeekStart} />
 
           <Text style={styles.hint}>
-            Target headcount (AM–PM). Tap any cell to edit. Changes save automatically.
+            Target headcount (AM–PM). Tap any cell to edit. Each week saves separately.
           </Text>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.actionBtn} onPress={copyWeekToNext}>
+              <Text style={styles.actionBtnText}>Copy to next week</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn} onPress={loadSampleSchedule}>
+              <Text style={styles.actionBtnText}>Load sample</Text>
+            </TouchableOpacity>
+          </View>
 
           {(state.roles as RoleWithStaff[]).map((role) => (
             <RoleSection
@@ -338,23 +355,45 @@ export default function App() {
               onDeleteStaff={(id) => deleteStaff(role.id, id)}
             />
           ))}
+
+          <View style={styles.footer}>
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Powered by </Text>
+              <TouchableOpacity onPress={() => Linking.openURL('https://echofives.com')} activeOpacity={0.7}>
+                <Image source={require('./assets/logo.png')} style={styles.footerLogo} resizeMode="contain" />
+              </TouchableOpacity>
+              <Text style={styles.footerText}> © 2026</Text>
+            </View>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </SafeAreaProvider>
   );
 }
 
+const COLORS = {
+  bg: '#f5f5f0',
+  card: '#ffffff',
+  border: '#e5e4df',
+  accent: '#2d6a4f',
+  accentHover: '#1b4332',
+  accentLight: '#95d5b2',
+  text: '#1a1a1a',
+  textMuted: '#5c5c5c',
+  headcount: '#40916c',
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0f172a',
+    backgroundColor: COLORS.bg,
   },
   centered: {
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    color: '#fef3c7',
+    color: COLORS.text,
     fontSize: 16,
   },
   scroll: {
@@ -364,11 +403,40 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40,
   },
+  footer: {
+    marginTop: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    alignItems: 'center',
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  footerLogo: {
+    height: 20,
+    width: 80,
+  },
+  footerText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  headerLogo: {
+    height: 28,
+    width: 100,
+  },
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fef3c7',
-    marginBottom: 12,
+    color: COLORS.text,
+    marginBottom: 0,
   },
   weekNav: {
     marginBottom: 16,
@@ -382,12 +450,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(71, 85, 105, 0.5)',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   navBtnText: {
-    color: '#fef3c7',
+    color: COLORS.text,
     fontSize: 24,
     fontWeight: '600',
   },
@@ -395,23 +465,41 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '500',
-    color: '#cbd5e1',
+    color: COLORS.textMuted,
     textAlign: 'center',
   },
   todayBtn: {
     width: 'auto',
     paddingHorizontal: 14,
-    backgroundColor: 'rgba(217, 119, 6, 0.9)',
+    backgroundColor: COLORS.accent,
   },
   todayBtnText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },
   hint: {
-    color: '#94a3b8',
+    color: COLORS.textMuted,
     fontSize: 13,
+    marginBottom: 12,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 20,
+  },
+  actionBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  actionBtnText: {
+    color: COLORS.text,
+    fontSize: 13,
+    fontWeight: '500',
   },
   section: {
     marginBottom: 28,
@@ -425,24 +513,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fbbf24',
+    color: COLORS.accent,
     letterSpacing: 1,
   },
   addBtn: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#d97706',
+    backgroundColor: COLORS.accent,
   },
   addBtnText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(71, 85, 105, 0.4)',
+    borderBottomColor: COLORS.border,
   },
   cell: {
     width: CELL_WIDTH,
@@ -455,12 +543,12 @@ const styles = StyleSheet.create({
     minWidth: NAME_WIDTH,
   },
   headerCell: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    backgroundColor: COLORS.accentLight + '33',
   },
   headerText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94a3b8',
+    color: COLORS.text,
     textAlign: 'center',
   },
   nameCellContent: {
@@ -474,50 +562,52 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#fef3c7',
+    color: COLORS.text,
   },
   deleteBtn: {
     padding: 4,
   },
   deleteBtnText: {
-    color: '#94a3b8',
+    color: COLORS.textMuted,
     fontSize: 20,
     lineHeight: 20,
   },
   inlineInput: {
-    backgroundColor: 'rgba(30, 41, 59, 1)',
-    color: '#fef3c7',
+    backgroundColor: COLORS.bg,
+    color: COLORS.text,
     fontSize: 14,
     padding: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderColor: COLORS.accent + '80',
   },
   shiftCell: {
     padding: 6,
     borderRadius: 6,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     minHeight: 36,
     justifyContent: 'center',
   },
   shiftText: {
     fontSize: 12,
-    color: 'rgba(254, 243, 199, 0.9)',
+    color: COLORS.text,
     textAlign: 'center',
   },
   shiftInput: {
-    backgroundColor: 'rgba(30, 41, 59, 1)',
-    color: '#fef3c7',
+    backgroundColor: COLORS.bg,
+    color: COLORS.text,
     fontSize: 12,
     padding: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderColor: COLORS.accent + '80',
   },
   headcountRow: {
-    backgroundColor: 'rgba(30, 41, 59, 0.6)',
+    backgroundColor: COLORS.accentLight + '40',
     borderTopWidth: 2,
-    borderTopColor: 'rgba(245, 158, 11, 0.3)',
+    borderTopColor: COLORS.accent + '50',
   },
   headcountLabel: {
     justifyContent: 'center',
@@ -525,7 +615,7 @@ const styles = StyleSheet.create({
   headcountLabelText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fde68a',
+    color: COLORS.headcount,
   },
   headcountCell: {
     padding: 6,
@@ -536,7 +626,7 @@ const styles = StyleSheet.create({
   headcountText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fde68a',
+    color: COLORS.headcount,
     textAlign: 'center',
   },
   hcEditRow: {
@@ -546,23 +636,23 @@ const styles = StyleSheet.create({
   },
   hcInput: {
     flex: 1,
-    backgroundColor: 'rgba(30, 41, 59, 1)',
-    color: '#fef3c7',
+    backgroundColor: COLORS.bg,
+    color: COLORS.text,
     fontSize: 12,
     padding: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderColor: COLORS.accent + '80',
   },
   emptyText: {
-    color: '#64748b',
+    color: COLORS.textMuted,
     fontSize: 14,
     marginTop: 12,
     textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -570,26 +660,26 @@ const styles = StyleSheet.create({
   modalContent: {
     width: '100%',
     maxWidth: 340,
-    backgroundColor: '#1e293b',
+    backgroundColor: COLORS.card,
     borderRadius: 16,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: COLORS.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#fef3c7',
+    color: COLORS.text,
     marginBottom: 16,
   },
   modalInput: {
-    backgroundColor: '#0f172a',
-    color: '#fef3c7',
+    backgroundColor: COLORS.bg,
+    color: COLORS.text,
     fontSize: 16,
     padding: 14,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: COLORS.border,
     marginBottom: 20,
   },
   modalButtons: {
@@ -602,15 +692,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   modalBtnCancel: {
-    color: '#94a3b8',
+    color: COLORS.textMuted,
     fontSize: 16,
   },
   modalBtnPrimary: {
-    backgroundColor: '#d97706',
+    backgroundColor: COLORS.accent,
     borderRadius: 10,
   },
   modalBtnPrimaryText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
