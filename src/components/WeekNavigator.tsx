@@ -3,9 +3,10 @@ import { getWeekDates, getStartOfWeek } from '../utils/dateUtils';
 interface WeekNavigatorProps {
   weekStart: string;
   onWeekChange: (date: Date) => void;
+  onLogout?: () => void;
 }
 
-export function WeekNavigator({ weekStart, onWeekChange }: WeekNavigatorProps) {
+export function WeekNavigator({ weekStart, onWeekChange, onLogout }: WeekNavigatorProps) {
   const start = new Date(weekStart + 'T12:00:00');
   const weekDates = getWeekDates(start);
 
@@ -81,6 +82,15 @@ export function WeekNavigator({ weekStart, onWeekChange }: WeekNavigatorProps) {
           </svg>
           Print / Save PDF
         </button>
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            className="no-print px-3 py-1.5 rounded-lg border border-schedule-border text-schedule-textMuted hover:bg-schedule-accentLight/30 text-sm font-medium transition-colors"
+          >
+            Log out
+          </button>
+        )}
       </div>
     </div>
   );

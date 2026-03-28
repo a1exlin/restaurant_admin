@@ -17,6 +17,8 @@ import type { RoleWithStaff } from './src/types';
 import { useScheduleStore } from './src/store/useScheduleStore';
 import { getWeekDates, getStartOfWeek } from './src/utils/dateUtils';
 import { formatShiftDisplay, parseShiftInput } from './src/utils/dateUtils';
+import { AuthProvider, useAuth } from './src/auth/AuthContext';
+import { AuthScreen } from './src/screens/AuthScreen';
 
 const CELL_WIDTH = 72;
 const NAME_WIDTH = 100;
@@ -35,7 +37,9 @@ function WeekNav({ weekStart, onWeekChange }: { weekStart: string; onWeekChange:
   return (
     <View style={styles.weekNav}>
       <View style={styles.headerRow}>
-        <Image source={require('./assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+        <TouchableOpacity onPress={() => Linking.openURL('https://echofives.com')} activeOpacity={0.7}>
+          <Image source={require('./assets/logo.png')} style={styles.headerLogo} resizeMode="contain" />
+        </TouchableOpacity>
         <Text style={styles.title}>Schedule</Text>
       </View>
       <View style={styles.weekNavRow}>
@@ -110,6 +114,7 @@ function RoleSection({
   onAddStaff,
   onUpdateStaff,
   onDeleteStaff,
+  onRandomizeSections,
 }: {
   role: RoleWithStaff;
   weekDates: { day: import('./src/types').DayOfWeek; label: string }[];
@@ -120,6 +125,7 @@ function RoleSection({
   onAddStaff: (name: string) => void;
   onUpdateStaff: (id: string, name: string) => void;
   onDeleteStaff: (id: string) => void;
+  onRandomizeSections?: () => void;
 }) {
   const [addModal, setAddModal] = useState(false);
   const [editingCell, setEditingCell] = useState<{ staffId: string; day: import('./src/types').DayOfWeek } | null>(null);
@@ -132,9 +138,16 @@ function RoleSection({
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>{role.label}</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setAddModal(true)}>
-          <Text style={styles.addBtnText}>+ Add</Text>
-        </TouchableOpacity>
+        <View style={styles.sectionHeaderBtns}>
+          {onRandomizeSections ? (
+            <TouchableOpacity style={styles.secondaryBtn} onPress={onRandomizeSections}>
+              <Text style={styles.secondaryBtnText}>Random sections</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity style={styles.addBtn} onPress={() => setAddModal(true)}>
+            <Text style={styles.addBtnText}>+ Add</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -291,7 +304,8 @@ function RoleSection({
   );
 }
 
-export default function App() {
+function ScheduleApp() {
+  const { user, ready: authReady, logout } = useAuth();
   const {
     state,
     isHydrated,
@@ -305,41 +319,60 @@ export default function App() {
     getHeadcount,
     copyWeekToNext,
     loadSampleSchedule,
+    randomizeServerSectionShifts,
   } = useScheduleStore();
 
   const weekStart = new Date(state.currentWeekStart + 'T12:00:00');
   const weekDates = getWeekDates(weekStart);
 
+  if (!authReady) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+        <StatusBar style="dark" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <>
+        <AuthScreen />
+        <StatusBar style="dark" />
+      </>
+    );
+  }
+
   if (!isHydrated) {
     return (
-      <SafeAreaProvider>
-        <View style={[styles.container, styles.centered]}>
-          <Text style={styles.loadingText}>Loading...</Text>
-          <StatusBar style="dark" />
-        </View>
-      </SafeAreaProvider>
+      <View style={[styles.container, styles.centered]}>
+        <Text style={styles.loadingText}>Loading...</Text>
+        <StatusBar style="dark" />
+      </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <StatusBar style="dark" />
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-          <WeekNav weekStart={state.currentWeekStart} onWeekChange={setWeekStart} />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <StatusBar style="dark" />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+        <WeekNav weekStart={state.currentWeekStart} onWeekChange={setWeekStart} />
 
-          <Text style={styles.hint}>
-            Target headcount (AM–PM). Tap any cell to edit. Each week saves separately.
-          </Text>
+        <Text style={styles.hint}>
+          Target headcount (AM–PM). Tap any cell to edit. Each week saves separately.
+        </Text>
 
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={copyWeekToNext}>
-              <Text style={styles.actionBtnText}>Copy to next week</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={loadSampleSchedule}>
-              <Text style={styles.actionBtnText}>Load sample</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionBtn} onPress={copyWeekToNext}>
+            <Text style={styles.actionBtnText}>Copy to next week</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={loadSampleSchedule}>
+            <Text style={styles.actionBtnText}>Load sample</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={logout}>
+            <Text style={[styles.actionBtnText, styles.logoutBtnText]}>Log out</Text>
+          </TouchableOpacity>
+        </View>
 
           {(state.roles as RoleWithStaff[]).map((role) => (
             <RoleSection
@@ -353,6 +386,7 @@ export default function App() {
               onAddStaff={(name) => addStaff(role.id, name)}
               onUpdateStaff={(id, name) => updateStaff(role.id, id, name)}
               onDeleteStaff={(id) => deleteStaff(role.id, id)}
+              onRandomizeSections={role.id === 'server' ? randomizeServerSectionShifts : undefined}
             />
           ))}
 
@@ -366,7 +400,16 @@ export default function App() {
             </View>
           </View>
         </ScrollView>
-      </SafeAreaView>
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ScheduleApp />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
@@ -496,6 +539,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.card,
   },
+  logoutBtnText: {
+    color: COLORS.textMuted,
+  },
   actionBtnText: {
     color: COLORS.text,
     fontSize: 13,
@@ -515,6 +561,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.accent,
     letterSpacing: 1,
+  },
+  sectionHeaderBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  secondaryBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+  },
+  secondaryBtnText: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: '600',
   },
   addBtn: {
     paddingHorizontal: 14,

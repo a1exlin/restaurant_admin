@@ -3,6 +3,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RoleId, DayOfWeek, Shift, ScheduleState, RoleWithStaff, WeekSchedule } from '../types';
 import { getStartOfWeek } from '../utils/dateUtils';
 import { SEED_SCHEDULE } from '../data/seedSchedule';
+import {
+  fairSectionLettersForDay,
+  shiftWithSectionLetter,
+  WEEK_DAYS,
+} from '../utils/serverSectionRandom';
 
 const ROLES: { id: RoleId; label: string }[] = [
   { id: 'server', label: 'SERVER' },
@@ -210,6 +215,38 @@ export function useScheduleStore() {
 
   const loadSampleSchedule = useCallback(() => updateState(() => SEED_SCHEDULE), [updateState]);
 
+  const randomizeServerSectionShifts = useCallback(() => {
+    updateState((prev) => {
+      const weekKey = prev.currentWeekStart;
+      const week = getOrCreateWeek(prev, weekKey);
+      const serverRole = prev.roles.find((r) => r.id === 'server');
+      if (!serverRole?.staff.length) return prev;
+
+      const staffList = serverRole.staff;
+      const n = staffList.length;
+      const newShifts = { ...week.shifts };
+
+      for (const day of WEEK_DAYS) {
+        const letters = fairSectionLettersForDay(n);
+        staffList.forEach((staff, i) => {
+          const key = `server_${staff.id}`;
+          const current = newShifts[key]?.[day] ?? week.shifts[key]?.[day] ?? null;
+          const letter = letters[i];
+          const next = shiftWithSectionLetter(current, letter);
+          newShifts[key] = { ...(newShifts[key] ?? {}), [day]: next };
+        });
+      }
+
+      return {
+        ...prev,
+        weekSchedules: {
+          ...prev.weekSchedules,
+          [weekKey]: { ...week, shifts: newShifts },
+        },
+      };
+    });
+  }, [updateState]);
+
   return {
     state,
     isHydrated,
@@ -223,5 +260,6 @@ export function useScheduleStore() {
     getHeadcount,
     copyWeekToNext,
     loadSampleSchedule,
+    randomizeServerSectionShifts,
   };
 }

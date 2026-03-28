@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@types/crypto-js": "^4.2.2",
+    "crypto-js": "^4.2.0",
     "expo": "~54.0.0",
+    "expo-crypto": "~13.0.2",
     "expo-status-bar": "~2.0.0",
     "react": "19.1.0",
     "react-native": "0.81.0",
