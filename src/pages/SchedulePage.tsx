@@ -4,6 +4,7 @@ import { getWeekDates } from '../utils/dateUtils';
 import { WeekNavigator } from '../components/WeekNavigator';
 import { RoleSection } from '../components/RoleSection';
 import { useAuth } from '../auth/AuthContext';
+import { BRAND_LOGO_ALT, BRAND_SITE_URL, ECHO_FIVES_LOGO_SRC } from '../brand';
 
 export default function SchedulePage() {
   const { logout } = useAuth();
@@ -80,15 +81,10 @@ export default function SchedulePage() {
         ))}
 
         <footer className="no-print mt-12 pt-6 border-t border-schedule-border text-center text-schedule-textMuted text-sm flex flex-col items-center gap-2">
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 flex-wrap justify-center">
             Powered by{' '}
-            <a
-              href="https://echofives.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block"
-            >
-              <img src="/logo.png" alt="ECHO FIVES" className="h-6 inline-block" />
+            <a href={BRAND_SITE_URL} target="_blank" rel="noopener noreferrer" className="inline-block">
+              <img src={ECHO_FIVES_LOGO_SRC} alt={BRAND_LOGO_ALT} className="h-6 inline-block" />
             </a>{' '}
             © 2026
           </span>

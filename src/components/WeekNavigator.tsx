@@ -1,4 +1,5 @@
 import { getWeekDates, getStartOfWeek } from '../utils/dateUtils';
+import { BRAND_LOGO_ALT, BRAND_SITE_URL, SCHEDULE_NAV_LOGO_SRC } from '../brand';
 
 interface WeekNavigatorProps {
   weekStart: string;
@@ -35,7 +36,13 @@ export function WeekNavigator({ weekStart, onWeekChange, onLogout }: WeekNavigat
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
       <div className="flex items-center gap-3">
-        <a href="https://echofives.com" target="_blank" rel="noopener noreferrer"><img src="/logo.png" alt="ECHO FIVES" className="h-8 md:h-9" /></a>
+        <a href={BRAND_SITE_URL} target="_blank" rel="noopener noreferrer">
+          <img
+            src={SCHEDULE_NAV_LOGO_SRC}
+            alt={BRAND_LOGO_ALT}
+            className="h-8 md:h-9 max-w-[180px] w-auto object-contain"
+          />
+        </a>
         <h1 className="text-xl md:text-2xl font-bold text-schedule-text">
           Schedule
         </h1>

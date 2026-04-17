@@ -22,6 +22,11 @@ type AuthContextValue = {
     password: string,
     confirmPassword: string
   ) => Promise<{ ok: true } | { ok: false; error: string }>;
+  resetPassword: (
+    email: string,
+    password: string,
+    confirmPassword: string
+  ) => Promise<{ ok: true } | { ok: false; error: string }>;
   logout: () => void;
 };
 
@@ -90,14 +95,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true as const };
   }, []);
 
+  const resetPassword = useCallback(async (email: string, password: string, confirmPassword: string) => {
+    const key = normalizeEmail(email);
+    if (!key) return { ok: false as const, error: 'Enter your email.' };
+    if (!isValidEmail(key)) return { ok: false as const, error: 'Enter a valid email address.' };
+    if (password.length < 6) {
+      return { ok: false as const, error: 'Password must be at least 6 characters.' };
+    }
+    if (password !== confirmPassword) {
+      return { ok: false as const, error: 'Passwords do not match.' };
+    }
+    const users = await getUsers();
+    if (!users[key]) {
+      return { ok: false as const, error: 'No account found with this email.' };
+    }
+    users[key] = await hashPassword(password);
+    await saveUsers(users);
+    return { ok: true as const };
+  }, []);
+
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem(SESSION_KEY);
     setUser(null);
   }, []);
 
   const value = useMemo(
-    () => ({ user, ready, login, signup, logout }),
-    [user, ready, login, signup, logout]
+    () => ({ user, ready, login, signup, resetPassword, logout }),
+    [user, ready, login, signup, resetPassword, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

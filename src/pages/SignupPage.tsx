@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { BRAND_LOGO_ALT, BRAND_SITE_URL, ECHO_FIVES_LOGO_SRC } from '../brand';
 
 export default function SignupPage() {
   const { user, ready, signup } = useAuth();
@@ -20,7 +21,7 @@ export default function SignupPage() {
   }
 
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/home" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +29,7 @@ export default function SignupPage() {
     setError('');
     const result = await signup(email, password, confirm);
     if (result.ok) {
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     } else {
       setError(result.error);
     }
@@ -38,8 +39,8 @@ export default function SignupPage() {
     <div className="min-h-screen bg-schedule-bg flex flex-col items-center justify-center px-4 py-12 text-schedule-text">
       <div className="w-full max-w-sm">
         <div className="flex justify-center mb-8">
-          <a href="https://echofives.com" target="_blank" rel="noopener noreferrer">
-            <img src="/logo.png" alt="ECHO FIVES" className="h-12" />
+          <a href={BRAND_SITE_URL} target="_blank" rel="noopener noreferrer">
+            <img src={ECHO_FIVES_LOGO_SRC} alt={BRAND_LOGO_ALT} className="h-12" />
           </a>
         </div>
         <h1 className="text-2xl font-bold text-center mb-1">Create account</h1>

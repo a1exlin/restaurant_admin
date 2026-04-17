@@ -12,6 +12,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../auth/AuthContext';
+import { BRAND_SITE_URL, echoFivesLogo } from '../brand';
 
 const COLORS = {
   bg: '#f5f5f0',
@@ -26,10 +27,10 @@ const COLORS = {
   errorText: '#b91c1c',
 };
 
-type Mode = 'login' | 'signup';
+type Mode = 'login' | 'signup' | 'reset';
 
 export function AuthScreen() {
-  const { login, signup } = useAuth();
+  const { login, signup, resetPassword } = useAuth();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,9 +45,18 @@ export function AuthScreen() {
       if (mode === 'login') {
         const r = await login(email, password);
         if (!r.ok) setError(r.error);
-      } else {
+      } else if (mode === 'signup') {
         const r = await signup(email, password, confirm);
         if (!r.ok) setError(r.error);
+      } else {
+        const r = await resetPassword(email, password, confirm);
+        if (!r.ok) setError(r.error);
+        else {
+          setMode('login');
+          setConfirm('');
+          setPassword('');
+          setError('Password reset successful. Log in with your new password.');
+        }
       }
     } finally {
       setBusy(false);
@@ -59,10 +69,10 @@ export function AuthScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity onPress={() => Linking.openURL('https://echofives.com')} activeOpacity={0.7}>
-          <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
+        <TouchableOpacity onPress={() => Linking.openURL(BRAND_SITE_URL)} activeOpacity={0.7}>
+          <Image source={echoFivesLogo} style={styles.logo} resizeMode="contain" />
         </TouchableOpacity>
-        <Text style={styles.title}>{mode === 'login' ? 'Sign in' : 'Create account'}</Text>
+        <Text style={styles.title}>{mode === 'login' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Reset password'}</Text>
         <Text style={styles.subtitle}>Manager schedule builder</Text>
 
         <View style={styles.card}>
@@ -82,7 +92,7 @@ export function AuthScreen() {
             placeholder="you@example.com"
             placeholderTextColor="#94a3b8"
           />
-          <Text style={styles.label}>Password</Text>
+          <Text style={styles.label}>{mode === 'reset' ? 'New password' : 'Password'}</Text>
           <TextInput
             style={styles.input}
             value={password}
@@ -91,7 +101,7 @@ export function AuthScreen() {
             placeholder={mode === 'signup' ? 'At least 6 characters' : '••••••••'}
             placeholderTextColor="#94a3b8"
           />
-          {mode === 'signup' ? (
+          {mode === 'signup' || mode === 'reset' ? (
             <>
               <Text style={styles.label}>Confirm password</Text>
               <TextInput
@@ -109,7 +119,9 @@ export function AuthScreen() {
             onPress={submit}
             disabled={busy}
           >
-            <Text style={styles.primaryBtnText}>{mode === 'login' ? 'Log in' : 'Sign up'}</Text>
+            <Text style={styles.primaryBtnText}>
+              {mode === 'login' ? 'Log in' : mode === 'signup' ? 'Sign up' : 'Reset password'}
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -118,11 +130,26 @@ export function AuthScreen() {
           onPress={() => {
             setMode(mode === 'login' ? 'signup' : 'login');
             setError('');
+            setConfirm('');
           }}
         >
           <Text style={styles.switchText}>
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <Text style={styles.switchLink}>{mode === 'login' ? 'Sign up' : 'Log in'}</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.switchRow}
+          onPress={() => {
+            setMode(mode === 'reset' ? 'login' : 'reset');
+            setError('');
+            setPassword('');
+            setConfirm('');
+          }}
+        >
+          <Text style={styles.switchText}>
+            <Text style={styles.switchLink}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

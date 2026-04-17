@@ -19,7 +19,7 @@ export interface RoleWithStaff {
 }
 
 export interface WeekSchedule {
-  shifts: Record<string, Record<DayOfWeek, Shift | null>>;
+  shifts: Record<string, Partial<Record<DayOfWeek, Shift | null>>>;
   headcounts: Record<RoleId, Record<DayOfWeek, { morning: number; night: number }>>;
 }
 
